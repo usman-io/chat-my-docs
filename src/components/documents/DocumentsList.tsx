@@ -5,17 +5,29 @@ import { Button } from '@/components/ui/button';
 import { useDocuments } from '@/contexts/DocumentContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Document } from '@/lib/api';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function DocumentsList() {
   const { documents, isLoading, deleteDocument } = useDocuments();
 
   const handleDelete = async (id: string, filename: string) => {
-    if (confirm(`Are you sure you want to delete "${filename}"?`)) {
-      try {
-        await deleteDocument(id);
-      } catch (error) {
-        console.error('Failed to delete document:', error);
-      }
+    try {
+      await deleteDocument(id);
+      toast.success(`Successfully deleted ${filename}`);
+    } catch (error) {
+      console.error('Failed to delete document:', error);
+      toast.error(`Failed to delete ${filename}`);
+      throw error; // Re-throw to allow the DocumentItem to handle the error state
     }
   };
 
@@ -62,19 +74,26 @@ function DocumentItem({
   onDelete: (id: string, filename: string) => void;
 }) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
       await onDelete(document.id, document.original_filename);
+      setShowDeleteDialog(false);
     } finally {
       setIsDeleting(false);
     }
   };
 
+  const openDeleteDialog = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteDialog(true);
+  };
+
   return (
     <div className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50">
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-3 max-w-[calc(100%-2rem)]">
         <div className="p-2 rounded-md bg-primary/10">
           <FileText className="h-5 w-5 text-primary" />
         </div>
@@ -96,16 +115,41 @@ function DocumentItem({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
-        onClick={handleDelete}
+        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+        onClick={openDeleteDialog}
         disabled={isDeleting}
       >
         {isDeleting ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <Trash2 className="h-4 w-4 text-destructive" />
+          <Trash2 className="h-4 w-4" />
         )}
       </Button>
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-medium">{document.original_filename}</span>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
