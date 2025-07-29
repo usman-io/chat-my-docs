@@ -1,3 +1,4 @@
+
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
@@ -59,7 +60,6 @@ export function FileUpload() {
               {isDragActive
                 ? 'Drop the files here'
                 : 'Drag & drop files here, or click to select files'}
-              }
             </p>
             <p className="text-sm text-muted-foreground">
               PDF, DOC, DOCX, TXT (max 10MB)

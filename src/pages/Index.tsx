@@ -5,22 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Send, FileText, MessageCircle, Bot, User, Paperclip, X } from "lucide-react";
+import { Upload, Send, MessageCircle, Bot, User, Paperclip } from "lucide-react";
 import { toast } from "sonner";
+import { useDocuments } from "@/contexts/DocumentContext";
+import { DocumentsList } from "@/components/documents/DocumentsList";
+import { FileUpload } from "@/components/documents/FileUpload";
 
 interface Message {
   id: string;
   content: string;
   sender: 'user' | 'bot';
   timestamp: Date;
-}
-
-interface Document {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  uploadDate: Date;
 }
 
 const Index = () => {
@@ -33,11 +28,11 @@ const Index = () => {
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
-  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { documents, uploadDocuments } = useDocuments();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,33 +43,10 @@ const Index = () => {
   }, [messages]);
 
   const handleFileUpload = async (files: FileList) => {
-    const formData = new FormData();
-    Array.from(files).forEach(file => {
-      formData.append('files', file);
-    });
-
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:8000/api/v1/documents/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const newDocs: Document[] = result.files.map((file: any) => ({
-          id: Math.random().toString(36).substr(2, 9),
-          name: file.filename,
-          size: file.size,
-          type: file.content_type,
-          uploadDate: new Date()
-        }));
-        
-        setDocuments(prev => [...prev, ...newDocs]);
-        toast.success(`Successfully uploaded ${newDocs.length} document(s)`);
-      } else {
-        toast.error('Failed to upload documents');
-      }
+      await uploadDocuments(Array.from(files));
+      toast.success(`Successfully uploaded ${files.length} document(s)`);
     } catch (error) {
       toast.error('Error uploading documents');
       console.error('Upload error:', error);
@@ -152,19 +124,6 @@ const Index = () => {
     }
   };
 
-  const removeDocument = (docId: string) => {
-    setDocuments(prev => prev.filter(doc => doc.id !== docId));
-    toast.success('Document removed');
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 h-screen max-h-screen">
@@ -174,7 +133,6 @@ const Index = () => {
           <Card className="h-full flex flex-col shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-gray-800">
-                <FileText className="w-5 h-5 text-indigo-600" />
                 Documents ({documents.length})
               </CardTitle>
             </CardHeader>
@@ -207,33 +165,7 @@ const Index = () => {
 
               {/* Documents List */}
               <ScrollArea className="flex-1">
-                <div className="space-y-2">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">{doc.name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(doc.size)}</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeDocument(doc.id)}
-                        className="text-gray-400 hover:text-red-500 flex-shrink-0"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  {documents.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                      <p className="text-sm">No documents uploaded yet</p>
-                    </div>
-                  )}
-                </div>
+                <DocumentsList />
               </ScrollArea>
             </CardContent>
           </Card>
