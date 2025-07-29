@@ -55,7 +55,7 @@ const Index = () => {
 
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:8000/upload', {
+      const response = await fetch('http://localhost:8000/api/v1/documents/upload', {
         method: 'POST',
         body: formData,
       });
@@ -117,7 +117,7 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch('http://localhost:8000/api/v1/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

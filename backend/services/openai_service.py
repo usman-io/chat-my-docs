@@ -8,16 +8,26 @@ from datetime import datetime
 import uuid
 import os
 from pathlib import Path
+from models.chat_models import DocumentInfo, ChatResponse, BatchJob
 
-from ..models.chat_models import DocumentInfo, ChatResponse, BatchJob
+from dotenv import load_dotenv
+
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 
 class OpenAIService:
     def __init__(self):
-        # Set your OpenAI API key here
-        # In production, use environment variables or secrets management
-        self.api_key = "your-openai-api-key-here"  # Replace with your actual API key
-        openai.api_key = self.api_key
-        self.client = openai.OpenAI(api_key=self.api_key)
+        # Set your OpenAI API key from environment variables
+        self.api_key = OPENAI_API_KEY
+        if not self.api_key:
+            raise ValueError(
+                "OpenAI API key not found. Please set the OPENAI_API_KEY environment variable."
+                " You can get an API key from https://platform.openai.com/api-keys"
+            )
+        # Initialize the OpenAI client with just the API key    
+        openai.api_key = self.api_key        
+        self.client = openai.OpenAI()
         
         # Directory for batch processing files
         self.batch_dir = Path("backend/batch_files")
@@ -34,7 +44,7 @@ class OpenAIService:
             # For real-time chat, we'll use the regular API
             # For batch processing of multiple documents, we'll use batch API
             
-            if len(documents) > 5:  # Use batch API for many documents
+            if len(documents) > 1:  # Use batch API for many documents
                 return await self._batch_chat_with_documents(message, documents)
             else:  # Use regular API for few documents
                 return await self._realtime_chat_with_documents(message, documents)
@@ -175,7 +185,7 @@ class OpenAIService:
             batch_job = self.batch_jobs[job_id]
             
             # Check with OpenAI
-            batch_response = self.client.batches.retrieve(batch_job.input_file_id)
+            batch_response = self.client.batches.retrieve(job_id)
             
             if batch_response.status == "completed":
                 # Process results

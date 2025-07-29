@@ -9,8 +9,8 @@ import PyPDF2
 import docx
 from datetime import datetime
 import uuid
+from models.chat_models import DocumentInfo
 
-from ..models.chat_models import DocumentInfo
 
 class DocumentService:
     def __init__(self):
@@ -20,9 +20,14 @@ class DocumentService:
         
         # In-memory storage (in production, use a proper database)
         self.documents: List[DocumentInfo] = []
-        
-        # Load existing documents
-        asyncio.create_task(self._load_documents())
+
+        loop = asyncio.get_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(self._load_documents())
+        except Exception as e:
+            print(f"Error loading documents: {str(e)}")
+            self.documents = []
 
     async def _load_documents(self):
         """Load documents from storage"""

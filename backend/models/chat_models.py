@@ -22,6 +22,17 @@ class DocumentInfo(BaseModel):
     upload_date: datetime
     text_content: str
 
+class DocumentResponse(BaseModel):
+    id: str
+    filename: str
+    original_filename: str
+    content_type: str
+    size: int
+    upload_date: datetime
+    
+    class Config:
+        from_attributes = True
+
 class BatchJob(BaseModel):
     job_id: str
     status: str
